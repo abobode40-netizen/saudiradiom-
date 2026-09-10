@@ -519,7 +519,11 @@ export default function App() {
           )}
 
           {currentView === "achievements" && (
-            <AchievementsView profile={profile} badges={badges} />
+            <AchievementsView
+              profile={profile}
+              badges={badges}
+              onShowToast={showToast}
+            />
           )}
         </main>
       </div>

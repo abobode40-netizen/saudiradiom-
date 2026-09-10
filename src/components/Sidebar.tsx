@@ -111,13 +111,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* User Mini Profile Card */}
-        <div className="mx-3 mt-2.5 p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50">
+        <button
+          onClick={() => handleNav("achievements")}
+          className="mx-3 mt-2.5 p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 text-right transition cursor-pointer group"
+          title="عرض لوحة الصدارة وقائمة الإنجازات"
+        >
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="font-semibold text-slate-300 flex items-center gap-1">
+            <span className="font-semibold text-slate-300 flex items-center gap-1 group-hover:text-amber-300 transition">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               المستوى {profile.level}
             </span>
-            <span className="text-indigo-300 font-bold">{profile.xp} XP</span>
+            <span className="text-indigo-300 font-bold font-mono">{profile.xp} XP</span>
           </div>
           <div className="w-full bg-slate-700/80 h-1.5 rounded-full overflow-hidden">
             <div
@@ -130,9 +134,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Flame className="w-3 h-3 fill-orange-400" />
               {profile.streakDays} أيام مستمرة
             </span>
-            <span>{profile.todayMinutes} د مذاكرة</span>
+            <span className="text-amber-300/80 group-hover:text-amber-300 font-bold flex items-center gap-0.5">
+              <span>لوحة الصدارة</span>
+              <ChevronLeft className="w-3 h-3" />
+            </span>
           </div>
-        </div>
+        </button>
 
         {/* Navigation Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 scrollbar-thin scrollbar-thumb-slate-700">
@@ -252,6 +259,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Brain className="w-4 h-4" />
                 <span>المراجعة الذكية والبطاقات</span>
               </div>
+            </button>
+
+            <button
+              onClick={() => handleNav("achievements")}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                currentView === "achievements"
+                  ? "bg-amber-600 text-white font-bold shadow-xs"
+                  : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>لوحة الصدارة والإنجازات</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                Top 5
+              </span>
             </button>
 
             <button

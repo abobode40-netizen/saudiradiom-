@@ -147,18 +147,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
 
-        {/* XP Points */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-2xl shrink-0">
-            ⭐
+        {/* XP Points & Leaderboard Link */}
+        <button
+          onClick={() => onNavigate("achievements")}
+          className="p-4 sm:p-5 rounded-2xl bg-white hover:bg-amber-50/40 border border-slate-200/80 hover:border-amber-300 shadow-xs flex items-center gap-3.5 text-right transition group cursor-pointer"
+          title="عرض لوحة الصدارة لأعلى 5 طلاب"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-2xl shrink-0 group-hover:scale-105 transition">
+            🏆
           </div>
-          <div>
-            <div className="text-lg sm:text-xl font-bold text-slate-800 font-mono">
-              {profile.xp} XP
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-slate-800 font-mono flex items-center gap-1.5">
+              <span>{profile.xp} XP</span>
+              <span className="text-[10px] font-sans font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                لوحة الصدارة
+              </span>
             </div>
-            <div className="text-xs text-slate-500 font-medium">نقاط الخبرة</div>
+            <div className="text-xs text-slate-500 font-medium truncate">
+              أعلى 5 طلاب • الترتيب
+            </div>
           </div>
-        </div>
+        </button>
 
         {/* Average Score */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3.5">
