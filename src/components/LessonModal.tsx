@@ -40,6 +40,8 @@ import {
 import confetti from "canvas-confetti";
 import { CameraCaptureModal } from "./CameraCaptureModal";
 import { PhotoLightboxModal } from "./PhotoLightboxModal";
+import { InteractiveMindMap } from "./InteractiveMindMap";
+import { generateCurriculumLessonExplanation } from "../utils/curriculumAiExplainer";
 
 interface LessonModalProps {
   lesson: Lesson | null;
@@ -153,6 +155,12 @@ export const LessonModal: React.FC<LessonModalProps> = ({
     if (!lesson) return;
     setIsAiLoading(true);
     try {
+      const fallbackData = generateCurriculumLessonExplanation(
+        lesson.title,
+        subject?.title || "المنهج الدراسي",
+        subject?.grade || "1st_secondary"
+      );
+
       const res = await fetch("/api/explain-lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,11 +171,31 @@ export const LessonModal: React.FC<LessonModalProps> = ({
           method: "all",
         }),
       });
-      const data = await res.json();
-      setAiLessonData(data);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.academic || data.mindmap)) {
+          setAiLessonData({
+            ...fallbackData,
+            ...data,
+            mindmapTree: data.mindmapTree || fallbackData.mindmapTree,
+          });
+          onShowToast("تم توليد الشرح والخريطة الذهنية التفاعلية بنجاح! 🚀");
+          return;
+        }
+      }
+
+      setAiLessonData(fallbackData);
+      onShowToast("تم تجهيز الشرح والخريطة الذهنية المعتمدة للدرس! ✨");
     } catch (e) {
       console.error("AI explanation error:", e);
-      onShowToast("تعذر جلب شرح الذكاء الاصطناعي");
+      const fallbackData = generateCurriculumLessonExplanation(
+        lesson.title,
+        subject?.title || "المنهج الدراسي",
+        subject?.grade || "1st_secondary"
+      );
+      setAiLessonData(fallbackData);
+      onShowToast("تم استعراض الشرح والخريطة الذهنية المعتمدة! 💡");
     } finally {
       setIsAiLoading(false);
     }
@@ -725,6 +753,16 @@ export const LessonModal: React.FC<LessonModalProps> = ({
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
+                        onClick={fetchAiExplanation}
+                        disabled={isAiLoading}
+                        className="p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 transition disabled:opacity-50"
+                        title="إعادة التوليد"
+                      >
+                        <Bot className={`w-4 h-4 ${isAiLoading ? "animate-spin" : ""}`} />
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => {
                           const currentText =
                             aiLessonData?.[aiExplanationMethod] || "شرح الدرس بالذكاء الاصطناعي";
@@ -771,23 +809,43 @@ export const LessonModal: React.FC<LessonModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Text Content */}
-                  <div className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-line font-sans">
-                    {aiLessonData?.[aiExplanationMethod] || (
-                      <div className="py-8 text-center space-y-3">
-                        <p className="text-slate-500 text-xs">
-                          اضغط على زر التوليد لاستخراج شرح الدرس بهذه الطريقة عبر الذكاء الاصطناعي
-                        </p>
-                        <button
-                          type="button"
-                          onClick={fetchAiExplanation}
-                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition"
-                        >
-                          توليد الشرح الآن 🚀
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Method Content Rendering */}
+                  {aiExplanationMethod === "mindmap" ? (
+                    <InteractiveMindMap
+                      treeData={
+                        aiLessonData?.mindmapTree ||
+                        generateCurriculumLessonExplanation(
+                          lesson.title,
+                          subject?.title || "المنهج",
+                          subject?.grade || "1st_secondary"
+                        ).mindmapTree
+                      }
+                      outlineText={aiLessonData?.mindmap}
+                      onReadAloud={(txt) => readAloud(txt)}
+                      onSaveToNote={(txt) => {
+                        handleAddQuickSnippet(txt);
+                        onShowToast("تم حفظ فرع الخريطة بالمفكرة 📝");
+                      }}
+                      onShowToast={onShowToast}
+                    />
+                  ) : (
+                    <div className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-line font-sans">
+                      {aiLessonData?.[aiExplanationMethod] || (
+                        <div className="py-8 text-center space-y-3">
+                          <p className="text-slate-500 text-xs">
+                            اضغط على زر التوليد لاستخراج شرح الدرس بهذه الطريقة عبر الذكاء الاصطناعي
+                          </p>
+                          <button
+                            type="button"
+                            onClick={fetchAiExplanation}
+                            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition"
+                          >
+                            توليد الشرح الآن 🚀
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

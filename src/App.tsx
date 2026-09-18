@@ -32,23 +32,43 @@ import { SourcesView } from "./components/views/SourcesView";
 import { AchievementsView } from "./components/views/AchievementsView";
 import { SubjectPortalView } from "./components/views/SubjectPortalView";
 import { MonthlyAllSubjectsPortalView } from "./components/views/MonthlyAllSubjectsPortalView";
+import { ExternalBooksView } from "./components/views/ExternalBooksView";
 
 import { StudyTimerModal } from "./components/StudyTimerModal";
 import { LessonModal } from "./components/LessonModal";
 import { UnitAiModal } from "./components/UnitAiModal";
 import { Toast } from "./components/Toast";
+import { OfflineIndicator } from "./components/OfflineIndicator";
+import { OfflineManagerModal } from "./components/OfflineManagerModal";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import { usePWAInstall } from "./hooks/usePWAInstall";
 import { Unit } from "./types";
 
 export default function App() {
   // Navigation State
   const [currentView, setCurrentView] = useState<ViewMode>("home");
   const [activeSubjectPortalId, setActiveSubjectPortalId] = useState<string>("math");
+  const [externalBooksSubjectId, setExternalBooksSubjectId] = useState<string | undefined>(undefined);
+  const [externalBooksUnitId, setExternalBooksUnitId] = useState<string | undefined>(undefined);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Offline & PWA State
+  const { isOnline, isBrowserOnline, isManualOffline, toggleManualOffline } = useOnlineStatus();
+  const { isInstallable, isInstalled, install: installPWA } = usePWAInstall();
+  const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
 
   const handleOpenSubjectDoor = (subjectId: string) => {
     setActiveSubjectPortalId(subjectId);
     setCurrentView("subject_portal");
+    setIsMobileSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleOpenExternalBooks = (subjectId?: string, unitId?: string) => {
+    setExternalBooksSubjectId(subjectId);
+    setExternalBooksUnitId(unitId);
+    setCurrentView("external_books");
     setIsMobileSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -127,6 +147,22 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("rafiq_student_profile", JSON.stringify(profile));
   }, [profile]);
+
+  // Online / Offline notifications
+  useEffect(() => {
+    const handleOnlineEvent = () => {
+      showToast("تم الاتصال بالإنترنت بنجاح 🟢 جميع الميزات متزامنة!");
+    };
+    const handleOfflineEvent = () => {
+      showToast("أنت الآن في وضع الأوفلاين 📴 يمكنك الاستمرار في المذاكرة وحل الاختبارات كالمعتاد!");
+    };
+    window.addEventListener("online", handleOnlineEvent);
+    window.addEventListener("offline", handleOfflineEvent);
+    return () => {
+      window.removeEventListener("online", handleOnlineEvent);
+      window.removeEventListener("offline", handleOfflineEvent);
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("rafiq_curriculum_subjects_v2027", JSON.stringify(subjects));
@@ -359,6 +395,11 @@ export default function App() {
         profile={profile}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        isOnline={isOnline}
+        isManualOffline={isManualOffline}
+        onOpenOfflineManager={() => setIsOfflineModalOpen(true)}
+        isInstallable={isInstallable}
+        onInstallApp={installPWA}
       />
 
       {/* Main Content Layout */}
@@ -397,6 +438,11 @@ export default function App() {
             showToast(!soundEnabled ? "تم تفعيل الصوت 🔊" : "تم كتم الصوت 🔇");
           }}
           onShowToast={showToast}
+          isOnline={isOnline}
+          isManualOffline={isManualOffline}
+          onOpenOfflineManager={() => setIsOfflineModalOpen(true)}
+          isInstallable={isInstallable}
+          onInstallApp={installPWA}
         />
 
         {/* View Router Body */}
@@ -429,6 +475,7 @@ export default function App() {
               onOpenUnitAi={(unit, subject) => {
                 setActiveUnitAi({ unit, subject });
               }}
+              onOpenExternalBooks={handleOpenExternalBooks}
               onShowToast={showToast}
               onCompleteQuiz={(score, total, xp) => {
                 const pct = total > 0 ? Math.round((score / total) * 100) : 0;
@@ -448,6 +495,20 @@ export default function App() {
                 setProfile((prev) => ({ ...prev, xp: prev.xp + xp }));
                 showToast(`تمت إضافة +${xp} XP إلى رصيدك الأكاديمي! ⭐`);
               }}
+            />
+          )}
+
+          {currentView === "external_books" && (
+            <ExternalBooksView
+              profile={profile}
+              subjects={subjects}
+              onShowToast={showToast}
+              onRewardXp={(xp) => {
+                setProfile((prev) => ({ ...prev, xp: prev.xp + xp }));
+                showToast(`تمت إضافة +${xp} XP إلى رصيدك الأكاديمي! ⭐`);
+              }}
+              initialSubjectId={externalBooksSubjectId}
+              initialUnitId={externalBooksUnitId}
             />
           )}
 
@@ -515,6 +576,7 @@ export default function App() {
               sources={sources}
               onAddSource={(src) => setSources((prev) => [src, ...prev])}
               onShowToast={showToast}
+              onNavigateToExternalBooks={() => handleOpenExternalBooks()}
             />
           )}
 
@@ -565,6 +627,25 @@ export default function App() {
           handleAskAiAboutLesson(question, context);
         }}
         onFinishQuiz={handleFinishQuiz}
+        onShowToast={showToast}
+      />
+
+      {/* Offline Indicator floating banner */}
+      <OfflineIndicator
+        isOnline={isOnline}
+        isManualOffline={isManualOffline}
+        onOpenOfflineManager={() => setIsOfflineModalOpen(true)}
+        onToggleManualOffline={toggleManualOffline}
+      />
+
+      {/* Offline & PWA Storage Manager Modal */}
+      <OfflineManagerModal
+        isOpen={isOfflineModalOpen}
+        onClose={() => setIsOfflineModalOpen(false)}
+        isOnline={isOnline}
+        isBrowserOnline={isBrowserOnline}
+        isManualOffline={isManualOffline}
+        onToggleManualOffline={toggleManualOffline}
         onShowToast={showToast}
       />
 

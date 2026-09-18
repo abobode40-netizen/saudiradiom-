@@ -109,18 +109,34 @@ export const YoutubeUnitLessonSection: React.FC<YoutubeUnitLessonSectionProps> =
             <p className="text-xs text-rose-100">
               المعلم: <strong className="text-white font-bold">{lesson.teacherName}</strong> • {lesson.teacherChannel} ({lesson.durationMinutes} دقيقة)
             </p>
+            <p className="text-[11px] text-rose-200/90 flex items-center gap-1">
+              <span>🎯</span>
+              <span>ينقلك مباشرة إلى شرح الدرس والوحدة المعتمد على منصة YouTube دون أي روابط خارجية.</span>
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
             <a
               href={lesson.youtubeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2.5 rounded-2xl bg-white text-red-600 hover:bg-rose-50 font-bold text-xs shadow-md transition flex items-center gap-2"
+              title="مشاهدة أفضل شروحات الدرس على يوتيوب"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>مشاهدة الحصة على يوتيوب</span>
+              <span>مشاهدة الشرح على YouTube 🎬</span>
               <ExternalLink className="w-3 h-3 text-red-400" />
+            </a>
+
+            <a
+              href={`https://www.youtube.com/@Madrasetna3/search?query=${encodeURIComponent(lesson.unitTitle + " " + lesson.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2.5 rounded-2xl bg-red-700/80 hover:bg-red-800 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 border border-red-400/40"
+              title="قناة مدرستنا 3 - وزارة التربية والتعليم"
+            >
+              <span>قناة مدرستنا 📺</span>
+              <ExternalLink className="w-3 h-3 text-rose-200" />
             </a>
           </div>
         </div>

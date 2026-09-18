@@ -2,6 +2,7 @@ export type ViewMode =
   | "home"
   | "subject_portal"
   | "monthly_exams"
+  | "external_books"
   | "curriculum"
   | "ai"
   | "quizzes"
@@ -68,7 +69,7 @@ export interface ChatMessage {
   mode?: "explain" | "simplify" | "socratic" | "solve_step_by_step" | "exam_prep";
 }
 
-export type QuizQuestionType = "multiple_choice" | "essay" | "fill_blank";
+export type QuizQuestionType = "multiple_choice" | "essay" | "true_false" | "fill_blank";
 
 export interface QuizQuestion {
   id: string;
@@ -82,6 +83,14 @@ export interface QuizQuestion {
   subjectId?: string;
   unitId?: string;
   unitTitle?: string;
+  // Ministry Exam Standards
+  ministryStandard?: string; // e.g. "مستويات تفكير عليا - تطبيق وتحليل", "بابل شيت - فهم واستيعاب"
+  marks?: number; // e.g. 1 or 2 marks per Egyptian Ministry specification
+  // For true_false
+  isTrue?: boolean;
+  correction?: string; // تصويب الخطأ مع التعليل العلمي المعتمد
+  // For multiple_choice exclusions
+  exclusionReasoning?: string[]; // أسباب استبعاد البدائل الخاطئة
   // For fill_blank
   correctAnswer?: string;
   acceptedAnswers?: string[];
@@ -169,4 +178,125 @@ export interface LessonUserNote {
   updatedAt: string;
   photos?: NotePhoto[];
 }
+
+export type ExternalBookSeries =
+  | "المعاصر"
+  | "الامتحان"
+  | "الأضواء"
+  | "سلاح_التلميذ"
+  | "الشامل"
+  | "الوافي"
+  | "نيوتن"
+  | "اللواء"
+  | "كتاب_خاص_PDF";
+
+export interface ExternalBookChapterExcerpt {
+  unitId: string;
+  unitTitle: string;
+  keyChapters: string[];
+  coreTricks: string[];
+  pageRange?: string;
+}
+
+export interface ExternalBook {
+  id: string;
+  title: string;
+  seriesName: ExternalBookSeries;
+  subjectId: string;
+  subjectTitle: string;
+  grade: GradeLevel;
+  term: 1 | 2;
+  publisher: string;
+  badge: string;
+  coverColor: string;
+  description: string;
+  pdfUrl?: string;
+  fileName?: string;
+  fileSize?: string;
+  pageCount?: number;
+  isCustomUploaded?: boolean;
+  uploadedAt?: string;
+  extractedTextSample?: string;
+  unitsBreakdown: ExternalBookChapterExcerpt[];
+}
+
+export interface ExternalBookUnitExplanation {
+  unitTitle: string;
+  bookTitle: string;
+  seriesName: string;
+  subjectTitle: string;
+  gradeName: string;
+  pedagogicalMethod: string;
+  deepTheoreticalFoundation: string;
+  coreLawsAndFormulas: {
+    title: string;
+    formula: string;
+    unit: string;
+    bookSpecialRule: string;
+    explanation: string;
+  }[];
+  stepByStepWorkedExamples: {
+    problemNumber: number;
+    problemTitle: string;
+    question: string;
+    givenData: string[];
+    appliedFormula: string;
+    solutionSteps: string[];
+    finalAnswer: string;
+    bookTip: string;
+  }[];
+  bookGoldenTricks: string[];
+  commonPitfalls: string[];
+  feynmanSummary: string;
+}
+
+export interface ExternalBookQuizQuestion {
+  id: string;
+  questionNumber: number;
+  type: "multiple_choice" | "essay" | "fill_blank";
+  question: string;
+  options?: string[];
+  correctIndex?: number;
+  difficulty: "easy" | "medium" | "hard";
+  sourceReference: string;
+  hint?: string;
+  modelSolution: {
+    correctAnswerText: string;
+    thinkingMethodology: string;
+    stepByStepDerivation?: string[];
+    whyOthersWrong?: string;
+    marksAllocation: string;
+  };
+}
+
+export interface ExternalBookUnitQuiz {
+  unitId: string;
+  unitTitle: string;
+  bookTitle: string;
+  seriesName: string;
+  subjectTitle: string;
+  gradeName: string;
+  totalQuestions: number;
+  passScore: number;
+  questions: ExternalBookQuizQuestion[];
+}
+
+export interface ExternalBookStudyGuide {
+  executiveSummary: string;
+  bulletSummary: string[];
+  keyDefinitions: { term: string; definition: string }[];
+  goldenFormulasAndRules: { name: string; rule: string; context: string }[];
+  examTricksAndTraps: string[];
+  audioOverviewScript: { host1: string; host2: string }[];
+  mindMapConceptNodes: { id: string; label: string; branch: string; details: string }[];
+}
+
+export interface ExternalBookChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  sourcesCited?: string[];
+}
+
 

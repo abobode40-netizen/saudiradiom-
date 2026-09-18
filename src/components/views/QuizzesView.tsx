@@ -214,9 +214,15 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
 
   // Launch Quick MCQ Quiz
   const handleStartQuickQuiz = () => {
-    const questions = [...presetQuestions].sort(() => Math.random() - 0.5);
+    const subjectFiltered = presetQuestions.filter(
+      (q) => q.subjectId === selectedSubjectId || (q.unitTitle && currentSubject && q.unitTitle.includes(currentSubject.title))
+    );
+    let questions = subjectFiltered.length > 0
+      ? [...subjectFiltered].sort(() => Math.random() - 0.5)
+      : getUnitDiverseQuestions(currentSubject, currentUnit, "multiple_choice");
+    
     initQuizState(questions, "quick");
-    onShowToast("تم بدء الاختبار السريع! بالتوفيق ⚡");
+    onShowToast(`تم بدء الاختبار السريع في مادة "${currentSubject.title}"! بالتوفيق ⚡`);
   };
 
   // Launch Custom AI Quiz

@@ -79,6 +79,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <Award className="w-4 h-4 text-amber-300" />
                 <span>الامتحانات والتقييمات الشهرية</span>
               </button>
+              <button
+                onClick={() => onNavigate("external_books")}
+                className="px-4 py-3 rounded-2xl bg-purple-500/30 hover:bg-purple-500/40 text-purple-100 font-bold text-xs sm:text-sm border border-purple-300/30 transition flex items-center gap-2 backdrop-blur-xs"
+              >
+                <BookOpen className="w-4 h-4 text-purple-300" />
+                <span>الكتب الخارجية والـ PDF</span>
+              </button>
             </div>
           </div>
 

@@ -17,6 +17,10 @@ import {
   Award,
   Layers,
   ChevronLeft,
+  Wifi,
+  WifiOff,
+  HardDrive,
+  Download,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,6 +35,11 @@ interface SidebarProps {
   onClose?: () => void;
   onCloseMobile?: () => void;
   profile: StudentProfile;
+  onOpenOfflineManager?: () => void;
+  isOnline?: boolean;
+  isManualOffline?: boolean;
+  isInstallable?: boolean;
+  onInstallApp?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -45,6 +54,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   onCloseMobile,
   profile,
+  onOpenOfflineManager,
+  isOnline = true,
+  isManualOffline = false,
+  isInstallable = false,
+  onInstallApp,
 }) => {
   const subjectsList = subjects && subjects.length > 0 ? subjects : INITIAL_SUBJECTS;
   const mobileOpen = isOpen ?? isMobileOpen ?? false;
@@ -222,6 +236,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 شامل
               </span>
             </button>
+
+            <button
+              onClick={() => handleNav("external_books")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 border mt-1.5 ${
+                currentView === "external_books"
+                  ? "bg-linear-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-md font-bold"
+                  : "bg-purple-950/20 text-purple-200 border-purple-500/30 hover:bg-purple-900/40"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-purple-300 shrink-0" />
+                <span className="truncate">الكتب الخارجية والمذكرات (PDF)</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-400/20 text-purple-300 border border-purple-400/30 shrink-0 font-bold">
+                جديد PDF
+              </span>
+            </button>
           </div>
 
           {/* Section 4: General Learning Tools */}
@@ -319,13 +350,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>فهرس المناهج والوحدات</span>
               </div>
             </button>
+
+            {/* Offline Mode & Storage Management */}
+            {onOpenOfflineManager && (
+              <button
+                onClick={onOpenOfflineManager}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-300 hover:bg-slate-800/80 hover:text-white group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <HardDrive className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
+                  <span>وضع الأوفلاين والتخزين</span>
+                </div>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  !isOnline
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                }`}>
+                  {!isOnline ? "أوفلاين" : "جاهز"}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="p-3 border-t border-slate-800/80 text-center">
-          <div className="text-[10px] text-slate-400 font-medium">
-            مناهج وزارة التعليم المصرية 2026/2027
+        {/* Footer info & PWA Install */}
+        <div className="p-3 border-t border-slate-800/80 space-y-2">
+          {isInstallable && onInstallApp && (
+            <button
+              onClick={onInstallApp}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>تثبيت التطبيق على الجهاز</span>
+            </button>
+          )}
+
+          <div className="text-center">
+            <div className="text-[10px] text-slate-400 font-medium">
+              مناهج وزارة التعليم المصرية 2026/2027 • أوفلاين 100%
+            </div>
           </div>
         </div>
       </aside>

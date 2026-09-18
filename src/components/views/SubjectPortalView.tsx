@@ -50,6 +50,7 @@ interface SubjectPortalViewProps {
   onOpenLesson: (subjectId: string, lessonId: string) => void;
   onAskAi: (prompt: string, subjectTitle: string) => void;
   onOpenUnitAi?: (unit: Unit, subject: Subject) => void;
+  onOpenExternalBooks?: (subjectId: string, unitId?: string) => void;
   onShowToast: (msg: string) => void;
   onCompleteQuiz?: (score: number, total: number, xp: number) => void;
 }
@@ -71,6 +72,7 @@ export const SubjectPortalView: React.FC<SubjectPortalViewProps> = ({
   onOpenLesson,
   onAskAi,
   onOpenUnitAi,
+  onOpenExternalBooks,
   onShowToast,
   onCompleteQuiz,
 }) => {
@@ -223,7 +225,7 @@ export const SubjectPortalView: React.FC<SubjectPortalViewProps> = ({
     // Generate comprehensive multi-unit questions from all units of this subject
     const allQuestions: QuizQuestion[] = [];
     subject.units.forEach((u) => {
-      const uQuestions = getUnitDiverseQuestions(u, subject, "mixed");
+      const uQuestions = getUnitDiverseQuestions(subject, u, "mixed");
       allQuestions.push(...uQuestions);
       u.lessons.forEach((l) => {
         if (l.testQuestion) {
@@ -646,6 +648,20 @@ export const SubjectPortalView: React.FC<SubjectPortalViewProps> = ({
           <Bot className="w-4 h-4 text-amber-500" />
           <span>معلم الباب الذكي</span>
         </button>
+
+        {onOpenExternalBooks && (
+          <button
+            onClick={() => onOpenExternalBooks(subject.id)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 shadow-xs"
+            title="تصفح الكتب الخارجية المعتمدة (المعاصر، الامتحان) وإدراج ملفات PDF"
+          >
+            <BookOpen className="w-4 h-4 text-purple-600" />
+            <span>الكتب الخارجية والـ PDF</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-200 text-purple-900 font-bold">
+              المعاصر والامتحان
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ================= TAB 1: CURRICULUM, UNITS & LESSONS ================= */}
@@ -736,6 +752,18 @@ export const SubjectPortalView: React.FC<SubjectPortalViewProps> = ({
                         <Award className="w-3.5 h-3.5 text-amber-600" />
                         <span>اختبارات الوحدة</span>
                       </button>
+
+                      {/* External Books Button */}
+                      {onOpenExternalBooks && (
+                        <button
+                          onClick={() => onOpenExternalBooks(subject.id, unit.id)}
+                          className="px-3 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5"
+                          title="شرح تفصيلي واختبارات الوحدة من الكتب الخارجية المعتمدة (المعاصر، الامتحان...)"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+                          <span>كتب خارجية واختبارات</span>
+                        </button>
+                      )}
 
                       {/* AI Masterclass Button */}
                       {onOpenUnitAi && (
@@ -915,8 +943,8 @@ export const SubjectPortalView: React.FC<SubjectPortalViewProps> = ({
           {/* Render YouTube Lesson Section */}
           {(() => {
             const activeUnit = subject.units.find((u) => u.id === selectedYoutubeUnitId) || subject.units[0];
-            const ytLessons = getSubjectYoutubeLessons(subject.id, activeUnit?.id);
-            const ytLesson = ytLessons[0] || (getSubjectYoutubeLessons(subject.id)[0]);
+            const ytLessons = getSubjectYoutubeLessons(subject.id, activeUnit?.id, activeUnit?.title, subject.title);
+            const ytLesson = ytLessons[0];
 
             if (!ytLesson) {
               return (

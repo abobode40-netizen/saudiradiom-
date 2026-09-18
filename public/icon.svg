@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca"/>
+      <stop offset="50%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1e1b4b" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle -->
+  <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+
+  <!-- Subtle glow inner ring -->
+  <rect x="16" y="16" width="480" height="480" rx="99" fill="none" stroke="white" stroke-width="4" stroke-opacity="0.15"/>
+
+  <!-- Central Graduation Cap & Academic Symbol -->
+  <g filter="url(#shadow)" transform="translate(256, 235)">
+    <!-- Cap Diamond -->
+    <path d="M 0 -85 L 150 -15 L 0 55 L -150 -15 Z" fill="#ffffff"/>
+    
+    <!-- Cap Base Underside -->
+    <path d="M -90 10 C -90 65, 90 65, 90 10 L 90 40 C 90 85, -90 85, -90 40 Z" fill="#e0e7ff"/>
+    
+    <!-- Tassel String & Ball -->
+    <path d="M 35 -20 Q 80 5 105 45" fill="none" stroke="url(#accent)" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="105" cy="50" r="10" fill="url(#accent)"/>
+    <path d="M 105 50 L 105 95" stroke="url(#accent)" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Golden Stars & Sparkles -->
+  <g fill="url(#accent)">
+    <!-- Star Left -->
+    <path d="M 120 360 Q 135 360 140 345 Q 145 360 160 360 Q 145 360 140 375 Q 135 360 120 360 Z"/>
+    <!-- Main Center Star -->
+    <circle cx="256" cy="380" r="16"/>
+    <!-- Star Right -->
+    <path d="M 352 360 Q 367 360 372 345 Q 377 360 392 360 Q 377 360 372 375 Q 367 360 352 360 Z"/>
+  </g>
+
+  <!-- Offline Ready Indicator Dot -->
+  <circle cx="430" cy="82" r="22" fill="#10b981" stroke="#ffffff" stroke-width="6"/>
+</svg>

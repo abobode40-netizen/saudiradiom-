@@ -10,6 +10,9 @@ import {
   VolumeX,
   Award,
   BookOpen,
+  Wifi,
+  WifiOff,
+  Download,
 } from "lucide-react";
 import {
   SubjectNavigationDropdown,
@@ -35,6 +38,11 @@ interface HeaderProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   onShowToast: (msg: string) => void;
+  isOnline?: boolean;
+  isManualOffline?: boolean;
+  onOpenOfflineManager?: () => void;
+  isInstallable?: boolean;
+  onInstallApp?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,6 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
   soundEnabled,
   onToggleSound,
   onShowToast,
+  isOnline = true,
+  isManualOffline = false,
+  onOpenOfflineManager,
+  isInstallable = false,
+  onInstallApp,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
@@ -179,6 +192,48 @@ export const Header: React.FC<HeaderProps> = ({
               variant="header"
             />
           </div>
+        )}
+
+        {/* Offline & Connectivity Status Button */}
+        {onOpenOfflineManager && (
+          <button
+            onClick={onOpenOfflineManager}
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-bold transition shadow-xs ${
+              !isOnline
+                ? "bg-amber-500 hover:bg-amber-600 text-slate-950 font-black animate-pulse"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+            }`}
+            title={
+              !isOnline
+                ? "أنت في وضع الأوفلاين - انقر لفحص المحتوى المحفوظ والتحكم"
+                : "الإنترنت متصل - انقر لفتح مركز إدارة وضع الأوفلاين"
+            }
+          >
+            {!isOnline ? (
+              <WifiOff className="w-3.5 h-3.5 text-slate-950" />
+            ) : (
+              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+            )}
+            <span className="hidden md:inline">
+              {!isOnline
+                ? isManualOffline
+                  ? "توفير الباقة"
+                  : "أوفلاين"
+                : "أوفلاين جاهز"}
+            </span>
+          </button>
+        )}
+
+        {/* PWA Install Button (If installable from browser) */}
+        {isInstallable && onInstallApp && (
+          <button
+            onClick={onInstallApp}
+            className="hidden sm:flex items-center gap-1 px-2.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition shadow-xs"
+            title="تثبيت التطبيق على الجهاز لتشغيله كبرنامج مستقل"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">تثبيت التطبيق</span>
+          </button>
         )}
 
         {/* Study Timer Button */}

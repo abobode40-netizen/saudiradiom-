@@ -14,12 +14,14 @@ interface SourcesViewProps {
   sources: OfficialSource[];
   onAddSource: (src: OfficialSource) => void;
   onShowToast: (msg: string) => void;
+  onNavigateToExternalBooks?: () => void;
 }
 
 export const SourcesView: React.FC<SourcesViewProps> = ({
   sources,
   onAddSource,
   onShowToast,
+  onNavigateToExternalBooks,
 }) => {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -96,6 +98,35 @@ export const SourcesView: React.FC<SourcesViewProps> = ({
           </p>
         </div>
       </div>
+
+      {/* External Books Quick Link Banner */}
+      {onNavigateToExternalBooks && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-linear-to-r from-purple-900/90 to-indigo-950 text-white border border-purple-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300 shrink-0 text-xl">
+              📚
+            </div>
+            <div>
+              <h4 className="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+                <span>بوابة الكتب الخارجية والمذكرات (PDF)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-200 border border-purple-400/30 font-bold">
+                  سلاسل معتمدة
+                </span>
+              </h4>
+              <p className="text-xs text-purple-200/80 mt-0.5">
+                تصفح كتب المعاصر والامتحان والأضواء، مع شروحات تفصيلية للوحدات واختبارات امتحانية مكثفة، أو ارفع كتب ومذكرات PDF خاصة بك.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onNavigateToExternalBooks}
+            className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
+          >
+            <span>فتح قسم الكتب الخارجية</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Category Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
