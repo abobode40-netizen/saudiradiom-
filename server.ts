@@ -1293,26 +1293,27 @@ ${historyFormatted || "بداية الجلسة"}
     }
   });
 
-  // Static serving for production or Vite middleware for development
-  const distPath = path.join(process.cwd(), "dist");
-  const hasDist = fs.existsSync(path.join(distPath, "index.html"));
-  const isProduction = process.env.NODE_ENV === "production" || (hasDist && process.env.NODE_ENV !== "development");
-
-  if (!isProduction) {
+  // Vite middleware for development or static serving for production
+  if (process.env.NODE_ENV !== "production") {
     try {
       const vite = await createViteServer({
-        server: { middlewareMode: true },
+        server: {
+          middlewareMode: true,
+          hmr: process.env.DISABLE_HMR === "true" ? false : undefined,
+        },
         appType: "spa",
       });
       app.use(vite.middlewares);
     } catch (err) {
       console.warn("Vite middleware initialization failed, falling back to static files:", err);
+      const distPath = path.join(process.cwd(), "dist");
       app.use(express.static(distPath));
       app.get("*", (_req, res) => {
         res.sendFile(path.join(distPath, "index.html"));
       });
     }
   } else {
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));

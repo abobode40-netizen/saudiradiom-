@@ -1,4 +1,5 @@
 import { QuizQuestion, Unit, Subject, StudentProfile, QuizQuestionType } from "../types";
+import { COMPREHENSIVE_MINISTRY_QUESTION_BANKS } from "../data/unitQuizBanks";
 
 export const normalizeArabic = (str: string): string => {
   if (!str) return "";
@@ -917,17 +918,25 @@ export const getUnitDiverseQuestions = (
   questionCount: number = 6
 ): QuizQuestion[] => {
   const subjectId = subject?.id || "math";
-  const unitId = unit?.id || "math_u1";
+  const normalizedSubjectId = subjectId.replace(/^(sec2_|sec3_)/, "");
+  const unitId = unit?.id || `${subjectId}_u1`;
   const unitTitle = unit?.title || "الوحدة الأولى";
   const subjectTitle = subject?.title || "المادة الدراسية";
 
-  const generator = SUBJECT_SPECIFIC_POOLS[subjectId];
+  // Check comprehensive ministry question banks first, then local subject pools
+  const generator =
+    COMPREHENSIVE_MINISTRY_QUESTION_BANKS[subjectId] ||
+    COMPREHENSIVE_MINISTRY_QUESTION_BANKS[normalizedSubjectId] ||
+    SUBJECT_SPECIFIC_POOLS[subjectId] ||
+    SUBJECT_SPECIFIC_POOLS[normalizedSubjectId] ||
+    SUBJECT_SPECIFIC_POOLS.math;
+
   let pool: QuizQuestion[] = [];
 
   if (generator) {
-    pool = generator(unitId, unitTitle);
+    pool = [...generator(unitId, unitTitle)];
   } else {
-    pool = SUBJECT_SPECIFIC_POOLS.math(unitId, unitTitle);
+    pool = [...SUBJECT_SPECIFIC_POOLS.math(unitId, unitTitle)];
   }
 
   // If the unit has specific lesson test questions, append them to the pool
@@ -954,19 +963,48 @@ export const getUnitDiverseQuestions = (
         });
       }
 
-      // Add lesson-derived True/False question
-      if (les.objectives && les.objectives.length > 0 && idx % 2 === 0) {
-        const obj = les.objectives[0];
+      // Add lesson-derived True/False question with verified pedagogical accuracy
+      const hasLaws = les.keyLaws && les.keyLaws.length > 0;
+      const keyLaw = hasLaws ? les.keyLaws[0] : null;
+
+      if (idx % 2 === 0) {
+        // True statement
+        const trueStatement = keyLaw
+          ? `ينص قانون (${keyLaw.title}) بالصيغة (${keyLaw.formula}) على أن: ${keyLaw.explanation}.`
+          : les.objectives && les.objectives[0]
+          ? `المفهوم الجوهري المقرر يقتضي بأن: ${les.objectives[0]}.`
+          : les.simplifiedSummary;
+
         pool.push({
           id: `tf_dyn_${les.id}_${idx}`,
           type: "true_false",
-          question: `صواب أم خطأ في درس (${les.title}): الهدف التعليمي الأساسي يقتضي بأن "${obj}".`,
+          question: `ضع علامة (صواب ✔️) أو (خطأ ✖️) في درس (${les.title}): ${trueStatement}`,
           isTrue: true,
-          correction: `تأكيد علمي تربوي: العبارة صحيحة تماماً وتوافق مخرجات تعلم درس (${les.title}) بكتاب الوزارة.`,
+          correction: `تأكيد القاعدة العلمية للوزارة: العبارة صحيحة تماماً وتوافق مخرجات تعلم درس (${les.title}) بكتاب الوزارة.`,
           explanation: `يعد هذا المفهوم من الركائز الأساسية التي تنص عليها خطة تدريس وزارة التربية والتعليم لوحدة ${unitTitle}.`,
           ministryStandard: "معايير الوزارة: صواب وخطأ مفاهيمي",
           marks: 1,
           difficulty: "easy",
+          subjectId,
+          unitId,
+          unitTitle,
+        });
+      } else {
+        // False statement testing common misconception
+        const falseStatement = keyLaw
+          ? `تنص علاقة (${keyLaw.title}) على أن التناسب عكسي دائماً بين طرفي المعادلة دون اشتراط ثبوت باقي العوامل الفيزيائية والرياضية.`
+          : `تتحقق النتائج المباشرة لدرس (${les.title}) بصورة مطلقة وعشوائية حتى عند غياب الشروط العلمية المقررة.`;
+
+        pool.push({
+          id: `tf_dyn_${les.id}_${idx}`,
+          type: "true_false",
+          question: `ضع علامة (صواب ✔️) أو (خطأ ✖️) في درس (${les.title}): ${falseStatement}`,
+          isTrue: false,
+          correction: `التصويب العلمي المعتمد لوزارة التربية والتعليم: العبارة غير صحيحة؛ فالقاعدة الدقيقة لدرس (${les.title}) هي: ${keyLaw ? `${keyLaw.title} تحكمه الصيغة (${keyLaw.formula}) حيث ${keyLaw.explanation}` : les.objectives && les.objectives[0] ? les.objectives[0] : les.simplifiedSummary}.`,
+          explanation: `خطأ شائع في الامتحانات: افتراض التناسب دون مراعاة ثبوت باقي المتغيرات.`,
+          ministryStandard: "معايير الوزارة: صواب وخطأ وتصويب المغالطات",
+          marks: 1,
+          difficulty: "medium",
           subjectId,
           unitId,
           unitTitle,

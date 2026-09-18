@@ -22,6 +22,8 @@ import {
   Layers,
   Award,
   ChevronDown,
+  Scale,
+  ShieldCheck,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import {
@@ -52,7 +54,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
 
   // Active Quiz States
   const [activeQuizType, setActiveQuizType] = useState<
-    "adaptive_unit" | "diverse_unit" | "essay_focus" | "fill_blank_focus" | "quick" | "ai_custom" | null
+    "adaptive_unit" | "diverse_unit" | "essay_focus" | "fill_blank_focus" | "true_false_focus" | "quick" | "ai_custom" | null
   >(null);
   const [currentQuestions, setCurrentQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -61,6 +63,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
 
   // Question Interaction States
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [selectedTrueFalse, setSelectedTrueFalse] = useState<boolean | null>(null);
   const [fillBlankInput, setFillBlankInput] = useState("");
   const [essayInput, setEssayInput] = useState("");
   const [answeredState, setAnsweredState] = useState(false);
@@ -121,6 +124,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
     setCurrentQuestions(questions);
     setCurrentIndex(0);
     setSelectedOption(null);
+    setSelectedTrueFalse(null);
     setFillBlankInput("");
     setEssayInput("");
     setAnsweredState(false);
@@ -136,9 +140,10 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   };
 
   // Launch Adaptive Unit Quiz
-  const handleStartAdaptiveUnitQuiz = async () => {
+  const handleStartAdaptiveUnitQuiz = async (unitOverride?: Unit | null) => {
+    const targetUnit = unitOverride !== undefined ? unitOverride : currentUnit;
     setIsGeneratingAiQuiz(true);
-    onShowToast(`جاري تشغيل الاختبار التكيفي لوحدة "${currentUnit?.title || currentSubject?.title}"... 🎯`);
+    onShowToast(`جاري تشغيل الاختبار التكيفي لوحدة "${targetUnit?.title || currentSubject?.title}"... 🎯`);
 
     const initialDiff = unitMastery.recommendedDifficulty;
     setCurrentAdaptiveDifficulty(initialDiff);
@@ -149,13 +154,13 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: currentSubject.title,
-          unitTitle: currentUnit?.title || "الوحدة المحددة",
-          topic: currentUnit ? currentUnit.lessons.map((l) => l.title).join(" و ") : currentSubject.title,
+          unitTitle: targetUnit?.title || "الوحدة المحددة",
+          topic: targetUnit ? targetUnit.lessons.map((l) => l.title).join(" و ") : currentSubject.title,
           grade: profile.gradeLevel,
           difficulty: "adaptive",
           studentLevel: unitMastery.level,
           questionTypes: "mixed",
-          count: 5,
+          count: 6,
         }),
       });
 
@@ -163,12 +168,12 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
       if (data.questions && data.questions.length > 0) {
         initQuizState(data.questions, "adaptive_unit");
       } else {
-        const fallbacks = getUnitDiverseQuestions(currentSubject, currentUnit, "mixed", "adaptive");
+        const fallbacks = getUnitDiverseQuestions(currentSubject, targetUnit, "mixed", "adaptive", 6);
         initQuizState(fallbacks, "adaptive_unit");
       }
     } catch (e) {
       console.error(e);
-      const fallbacks = getUnitDiverseQuestions(currentSubject, currentUnit, "mixed", "adaptive");
+      const fallbacks = getUnitDiverseQuestions(currentSubject, targetUnit, "mixed", "adaptive", 6);
       initQuizState(fallbacks, "adaptive_unit");
     } finally {
       setIsGeneratingAiQuiz(false);
@@ -176,9 +181,32 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
   };
 
   // Launch Diverse Unit Quiz (Paper exam style)
-  const handleStartDiverseUnitQuiz = async (filterType: QuizQuestionType | "mixed" = "mixed") => {
+  const handleStartDiverseUnitQuiz = async (
+    filterType: QuizQuestionType | "mixed" = "mixed",
+    unitOverride?: Unit | null,
+    countOverride?: number
+  ) => {
+    const targetUnit = unitOverride !== undefined ? unitOverride : currentUnit;
+    const targetCount = countOverride || (filterType === "mixed" ? 8 : 6);
     setIsGeneratingAiQuiz(true);
-    onShowToast("جاري إعداد أسئلة الاختبار المتنوعة وفق المواصفات الوزارية... 🌟");
+    onShowToast(
+      filterType === "true_false"
+        ? "جاري إعداد بنك الصواب والخطأ وتصويب المفاهيم الوزارية... ⚖️"
+        : filterType === "multiple_choice"
+        ? "جاري إعداد نماذج بابل شيت الوزارية... 🎯"
+        : filterType === "essay"
+        ? "جاري إعداد الأسئلة المقالية ونماذج الإجابة وسلالم الدرجات... ✍️"
+        : "جاري إعداد أسئلة الاختبار المتنوعة وفق المواصفات الوزارية... 🌟"
+    );
+
+    const mode =
+      filterType === "essay"
+        ? "essay_focus"
+        : filterType === "fill_blank"
+        ? "fill_blank_focus"
+        : filterType === "true_false"
+        ? "true_false_focus"
+        : "diverse_unit";
 
     try {
       const response = await fetch("/api/generate-quiz", {
@@ -186,27 +214,39 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: currentSubject.title,
-          unitTitle: currentUnit?.title || "اختبار شامل للمنهج",
-          topic: currentUnit ? currentUnit.lessons.map((l) => l.title).join(" و ") : "كافة فروع المادة",
+          unitTitle: targetUnit?.title || "اختبار شامل للمنهج",
+          topic: targetUnit ? targetUnit.lessons.map((l) => l.title).join(" و ") : "كافة فروع المادة",
           grade: profile.gradeLevel,
           difficulty: unitMastery.recommendedDifficulty,
           studentLevel: unitMastery.level,
           questionTypes: filterType,
-          count: 4,
+          count: targetCount,
         }),
       });
 
       const data = await response.json();
       if (data.questions && data.questions.length > 0) {
-        initQuizState(data.questions, filterType === "essay" ? "essay_focus" : filterType === "fill_blank" ? "fill_blank_focus" : "diverse_unit");
+        initQuizState(data.questions, mode);
       } else {
-        const fallbacks = getUnitDiverseQuestions(currentSubject, currentUnit, filterType, unitMastery.recommendedDifficulty);
-        initQuizState(fallbacks, filterType === "essay" ? "essay_focus" : filterType === "fill_blank" ? "fill_blank_focus" : "diverse_unit");
+        const fallbacks = getUnitDiverseQuestions(
+          currentSubject,
+          targetUnit,
+          filterType,
+          unitMastery.recommendedDifficulty,
+          targetCount
+        );
+        initQuizState(fallbacks, mode);
       }
     } catch (e) {
       console.error(e);
-      const fallbacks = getUnitDiverseQuestions(currentSubject, currentUnit, filterType, unitMastery.recommendedDifficulty);
-      initQuizState(fallbacks, filterType === "essay" ? "essay_focus" : filterType === "fill_blank" ? "fill_blank_focus" : "diverse_unit");
+      const fallbacks = getUnitDiverseQuestions(
+        currentSubject,
+        targetUnit,
+        filterType,
+        unitMastery.recommendedDifficulty,
+        targetCount
+      );
+      initQuizState(fallbacks, mode);
     } finally {
       setIsGeneratingAiQuiz(false);
     }
@@ -305,6 +345,47 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
     }
   };
 
+  // Handle True / False Answer Selection with Ministry Scientific Correction
+  const handleSelectTrueFalse = (userChoice: boolean) => {
+    if (answeredState) return;
+    setSelectedTrueFalse(userChoice);
+    setAnsweredState(true);
+
+    const currentQ = currentQuestions[currentIndex];
+    const expected = currentQ.isTrue !== undefined ? currentQ.isTrue : true;
+    const isCorrect = userChoice === expected;
+    setIsCurrentCorrect(isCorrect);
+
+    if (isCorrect) {
+      setCorrectAnswersCount((prev) => prev + 1);
+      const newStreak = consecutiveCorrect + 1;
+      setConsecutiveCorrect(newStreak);
+      setConsecutiveWrong(0);
+
+      if (activeQuizType === "adaptive_unit") {
+        const { nextDifficulty, message } = getNextAdaptiveDifficulty(currentAdaptiveDifficulty, newStreak, 0);
+        if (nextDifficulty !== currentAdaptiveDifficulty) {
+          setCurrentAdaptiveDifficulty(nextDifficulty);
+          setAdaptiveMessage(message);
+        }
+      }
+      onShowToast("إجابة صحيحة ومتقنة! تقييم علمي دقيق للمفهوم 🎯");
+    } else {
+      const newStreak = consecutiveWrong + 1;
+      setConsecutiveWrong(newStreak);
+      setConsecutiveCorrect(0);
+
+      if (activeQuizType === "adaptive_unit") {
+        const { nextDifficulty, message } = getNextAdaptiveDifficulty(currentAdaptiveDifficulty, 0, newStreak);
+        if (nextDifficulty !== currentAdaptiveDifficulty) {
+          setCurrentAdaptiveDifficulty(nextDifficulty);
+          setAdaptiveMessage(message);
+        }
+      }
+      onShowToast("إجابة غير صحيحة، راجع التصويب العلمي المعتمد للوزارة.");
+    }
+  };
+
   // Handle Fill-in-the-Blank Submission
   const handleCheckFillBlank = () => {
     if (answeredState || !fillBlankInput.trim()) return;
@@ -378,6 +459,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
     if (currentIndex + 1 < currentQuestions.length) {
       setCurrentIndex((prev) => prev + 1);
       setSelectedOption(null);
+      setSelectedTrueFalse(null);
       setFillBlankInput("");
       setEssayInput("");
       setAnsweredState(false);
@@ -432,6 +514,8 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                   ? "✍️ اختبار مقالي تحليلي"
                   : activeQuizType === "fill_blank_focus"
                   ? "🔤 اختبار إكمال المفاهيم"
+                  : activeQuizType === "true_false_focus"
+                  ? "⚖️ بنك الصواب والخطأ وتصويب المفاهيم الوزارية"
                   : activeQuizType === "quick"
                   ? "⚡ اختبار سريع"
                   : "🤖 تحدي الذكاء الاصطناعي"}
@@ -508,14 +592,22 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
 
           {/* Question Prompt Card */}
           <div className="p-5 sm:p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
                 {currentQ.type === "multiple_choice" || (!currentQ.type && currentQ.options)
                   ? "اختيار من متعدد (بابل شيت)"
+                  : currentQ.type === "true_false"
+                  ? "صواب وخطأ وتصويب المفاهيم (معيار الوزارة)"
                   : currentQ.type === "fill_blank"
                   ? "إكمال فراغات ومصطلحات"
                   : "سؤال مقالي تحليلي وتطبيقي"}
               </span>
+              {currentQ.ministryStandard && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                  <span>{currentQ.ministryStandard}</span>
+                </span>
+              )}
               {currentQ.unitTitle && (
                 <span className="text-[11px] font-medium text-slate-500">
                   {currentQ.unitTitle}
@@ -529,42 +621,147 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
 
           {/* 1. Multiple Choice Options */}
           {(currentQ.type === "multiple_choice" || (!currentQ.type && currentQ.options)) && (
-            <div className="grid gap-3">
-              {currentQ.options?.map((opt, idx) => {
-                let btnClass = "bg-white hover:bg-slate-50 border-slate-200 text-slate-800";
-                if (answeredState) {
-                  if (idx === currentQ.correctIndex) {
-                    btnClass = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs";
-                  } else if (idx === selectedOption) {
-                    btnClass = "bg-rose-50 border-rose-400 text-rose-950 shadow-xs";
-                  } else {
-                    btnClass = "bg-slate-50 border-slate-200 text-slate-400 opacity-60";
+            <div className="space-y-3">
+              <div className="grid gap-3">
+                {currentQ.options?.map((opt, idx) => {
+                  let btnClass = "bg-white hover:bg-slate-50 border-slate-200 text-slate-800";
+                  if (answeredState) {
+                    if (idx === currentQ.correctIndex) {
+                      btnClass = "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs";
+                    } else if (idx === selectedOption) {
+                      btnClass = "bg-rose-50 border-rose-400 text-rose-950 shadow-xs";
+                    } else {
+                      btnClass = "bg-slate-50 border-slate-200 text-slate-400 opacity-60";
+                    }
                   }
-                }
 
-                return (
-                  <button
-                    key={idx}
-                    disabled={answeredState}
-                    onClick={() => handleSelectOption(idx)}
-                    className={`w-full text-right p-4 rounded-2xl border text-xs sm:text-sm font-semibold transition flex items-center justify-between gap-2 ${btnClass}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
-                        {["أ", "ب", "ج", "د"][idx]}
-                      </span>
-                      <span>{opt}</span>
+                  return (
+                    <button
+                      key={idx}
+                      disabled={answeredState}
+                      onClick={() => handleSelectOption(idx)}
+                      className={`w-full text-right p-4 rounded-2xl border text-xs sm:text-sm font-semibold transition flex items-center justify-between gap-2 ${btnClass}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                          {["أ", "ب", "ج", "د"][idx]}
+                        </span>
+                        <span>{opt}</span>
+                      </div>
+
+                      {answeredState && idx === currentQ.correctIndex && (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      )}
+                      {answeredState && idx === selectedOption && idx !== currentQ.correctIndex && (
+                        <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Distractor Analysis & Exclusion Reasoning */}
+              {answeredState && currentQ.exclusionReasoning && currentQ.exclusionReasoning.length > 0 && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5 animate-in fade-in">
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Target className="w-4 h-4 text-indigo-600" />
+                    <span>تحليل استبعاد المشتتات وتفنيد البدائل (معيار البابل شيت الوزاري):</span>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-slate-700">
+                    {currentQ.exclusionReasoning.map((reason, rIdx) => (
+                      <div
+                        key={rIdx}
+                        className={`p-2 rounded-xl flex items-start gap-2 ${
+                          rIdx === currentQ.correctIndex
+                            ? "bg-emerald-50/90 text-emerald-950 border border-emerald-200 font-semibold"
+                            : "bg-white text-slate-700 border border-slate-200/80"
+                        }`}
+                      >
+                        <span className="shrink-0 font-bold">
+                          {["أ", "ب", "ج", "د"][rIdx] || `#${rIdx + 1}`}:
+                        </span>
+                        <span>{reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2. True / False Question Form with Ministry Scientific Correction */}
+          {currentQ.type === "true_false" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <button
+                  type="button"
+                  disabled={answeredState}
+                  onClick={() => handleSelectTrueFalse(true)}
+                  className={`p-4 sm:p-5 rounded-2xl border text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2.5 ${
+                    answeredState
+                      ? currentQ.isTrue === true
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : selectedTrueFalse === true
+                        ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                        : "bg-slate-100 text-slate-400 border-slate-200 opacity-60"
+                      : "bg-white hover:bg-emerald-50 text-emerald-900 border-emerald-200 hover:border-emerald-400 shadow-xs"
+                  }`}
+                >
+                  <CheckCircle2 className="w-5 h-5 shrink-0" />
+                  <span>(صواب ✔️) - العبارة صحيحة</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={answeredState}
+                  onClick={() => handleSelectTrueFalse(false)}
+                  className={`p-4 sm:p-5 rounded-2xl border text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2.5 ${
+                    answeredState
+                      ? currentQ.isTrue === false
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : selectedTrueFalse === false
+                        ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                        : "bg-slate-100 text-slate-400 border-slate-200 opacity-60"
+                      : "bg-white hover:bg-rose-50 text-rose-900 border-rose-200 hover:border-rose-400 shadow-xs"
+                  }`}
+                >
+                  <XCircle className="w-5 h-5 shrink-0" />
+                  <span>(خطأ ✖️) - العبارة غير صحيحة</span>
+                </button>
+              </div>
+
+              {/* True/False Instant Verdict & Correction */}
+              {answeredState && (
+                <div
+                  className={`p-4 rounded-2xl text-xs sm:text-sm font-medium border flex items-start gap-3 animate-in fade-in ${
+                    isCurrentCorrect
+                      ? "bg-emerald-50 text-emerald-950 border-emerald-200"
+                      : "bg-rose-50 text-rose-950 border-rose-200"
+                  }`}
+                >
+                  {isCurrentCorrect ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-2 flex-1">
+                    <div className="font-bold">
+                      {isCurrentCorrect
+                        ? `🎯 تقييم إجابتك: إجابة صحيحة ومتقنة! (${currentQ.isTrue ? "صواب ✔️" : "خطأ ✖️"})`
+                        : `⚠️ إجابة غير صحيحة - التقييم العلمي الدقيق للعبارة: ${currentQ.isTrue ? "صواب (صح ✔️)" : "خطأ (✖️)"}`}
                     </div>
-
-                    {answeredState && idx === currentQ.correctIndex && (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    {currentQ.correction && (
+                      <div className="text-slate-800 bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs leading-relaxed">
+                        <span className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                          <span>التصويب العلمي المعتمد والتعليل لوزارة التربية والتعليم:</span>
+                        </span>
+                        <span>{currentQ.correction}</span>
+                      </div>
                     )}
-                    {answeredState && idx === selectedOption && idx !== currentQ.correctIndex && (
-                      <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -997,33 +1194,57 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
           </div>
 
           {/* Specialized Question Types Quick Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Analytical Essay Focus */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-amber-50/80 to-white border border-amber-200 flex items-center justify-between gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* True / False & Correction Bank Focus */}
+            <div className="p-5 rounded-3xl bg-linear-to-br from-emerald-50/80 to-white border border-emerald-200 flex flex-col justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
-                  <PenTool className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                  <Scale className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900">تدريب مقالي تحليلي مخصص</h4>
+                  <h4 className="font-bold text-sm text-slate-900">بنك الصواب والخطأ وتصويب المفاهيم</h4>
                   <p className="text-xs text-slate-500">
-                    أسئلة علل وفسر واستنتج مع نماذج إجابة وزارة التعليم ومعايير التصحيح
+                    كشف الفخاخ الامتحانية وتصويب علمي دقيق معتمد لوزارة التعليم
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => handleStartDiverseUnitQuiz("essay")}
+                onClick={() => handleStartDiverseUnitQuiz("true_false", currentUnit, 8)}
                 disabled={isGeneratingAiQuiz}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shrink-0 disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-2xs"
               >
-                بدء المقالي ✍️
+                <Scale className="w-4 h-4" />
+                <span>بدء بنك الصواب والخطأ ⚖️</span>
+              </button>
+            </div>
+
+            {/* Analytical Essay Focus */}
+            <div className="p-5 rounded-3xl bg-linear-to-br from-amber-50/80 to-white border border-amber-200 flex flex-col justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0">
+                  <PenTool className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900">تدريب مقالي تحليلي مقنن</h4>
+                  <p className="text-xs text-slate-500">
+                    أسئلة علل وفسر واستنتج مع نماذج إجابة رسمية وسلالم التصحيح
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleStartDiverseUnitQuiz("essay", currentUnit, 4)}
+                disabled={isGeneratingAiQuiz}
+                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-2xs"
+              >
+                <PenTool className="w-4 h-4" />
+                <span>بدء المقالي الإرشادي ✍️</span>
               </button>
             </div>
 
             {/* Fill-in-the-blank Focus */}
-            <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-50/80 to-white border border-blue-200 flex items-center justify-between gap-3">
+            <div className="p-5 rounded-3xl bg-linear-to-br from-blue-50/80 to-white border border-blue-200 flex flex-col justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
@@ -1034,12 +1255,102 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                 </div>
               </div>
               <button
-                onClick={() => handleStartDiverseUnitQuiz("fill_blank")}
+                onClick={() => handleStartDiverseUnitQuiz("fill_blank", currentUnit, 6)}
                 disabled={isGeneratingAiQuiz}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shrink-0 disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-2xs"
               >
-                بدء الإكمال 🔤
+                <BookOpen className="w-4 h-4" />
+                <span>بدء الإكمال والمصطلحات 🔤</span>
               </button>
+            </div>
+          </div>
+
+          {/* Unit-by-Unit Comprehensive Ministry Quiz Vault */}
+          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
+                  <span>بنك اختبارات وحدات المنهج (وفق المعايير الوزارية 2026/2027)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  اختبارات مكثفة ومتنوعة لكل وحدة في مادة "{currentSubject.title}" مع تصويب المفاهيم وتحليل استبعاد المشتتات
+                </p>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 w-fit">
+                {currentSubject.units.length} وحدات دراسية
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {currentSubject.units.map((unit) => {
+                const info = getUnitMasteryInfo(unit);
+                return (
+                  <div
+                    key={unit.id}
+                    className="p-4 sm:p-5 rounded-2xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-indigo-300 hover:shadow-sm transition space-y-3.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            الوحدة {unit.order}
+                          </span>
+                          <span className="text-[10px] font-medium text-slate-500">
+                            {unit.lessons.length} دروس
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm text-slate-900">{unit.title}</h4>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${info.badgeClass}`}>
+                        {info.levelLabel}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200/70">
+                      <button
+                        onClick={() => handleStartDiverseUnitQuiz("mixed", unit, 10)}
+                        disabled={isGeneratingAiQuiz}
+                        className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 shadow-2xs disabled:opacity-50"
+                        title="امتحان شامل يضم كافة الأنماط (بابل شيت + صواب وخطأ + مقالي)"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>شامل (10)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleStartDiverseUnitQuiz("multiple_choice", unit, 8)}
+                        disabled={isGeneratingAiQuiz}
+                        className="p-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-900 border border-indigo-200 text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 shadow-2xs disabled:opacity-50"
+                        title="بابل شيت مع تحليل استبعاد المشتتات"
+                      >
+                        <Target className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>بابل شيت (8)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleStartDiverseUnitQuiz("true_false", unit, 8)}
+                        disabled={isGeneratingAiQuiz}
+                        className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 shadow-2xs disabled:opacity-50"
+                        title="أسئلة صواب وخطأ مع التصويب العلمي المعتمد والتعليل"
+                      >
+                        <Scale className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>صواب/خطأ (8)</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleStartDiverseUnitQuiz("essay", unit, 4)}
+                        disabled={isGeneratingAiQuiz}
+                        className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[11px] font-bold transition flex flex-col items-center justify-center gap-1 shadow-2xs disabled:opacity-50"
+                        title="أسئلة مقالية مع نموذج الإجابة وسلم التصحيح"
+                      >
+                        <PenTool className="w-3.5 h-3.5 text-amber-700" />
+                        <span>مقالي (4)</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1067,7 +1378,7 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                   type="text"
                   value={customTopic}
                   onChange={(e) => setCustomTopic(e.target.value)}
-                  placeholder="مثال: كان التامة، الأعداد المركبة، قوة الطفو..."
+                  placeholder="مثال: كان التامة، الأعداد المركبة، قانون كيرشوف..."
                   className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 font-medium"
                 />
               </div>
@@ -1079,9 +1390,10 @@ export const QuizzesView: React.FC<QuizzesViewProps> = ({
                   onChange={(e) => setCustomQuestionType(e.target.value as any)}
                   className="w-full text-xs font-semibold p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800"
                 >
-                  <option value="mixed">🌟 منوع (بابل شيت + مقالي + إكمال)</option>
-                  <option value="multiple_choice">🎯 اختيار من متعدد فقط (MCQ)</option>
-                  <option value="essay">✍️ مقالي تحليلي فقط</option>
+                  <option value="mixed">🌟 منوع وفق مواصفات الوزارة (بابل شيت + صواب وخطأ + مقالي)</option>
+                  <option value="multiple_choice">🎯 اختيار من متعدد فقط (بابل شيت)</option>
+                  <option value="true_false">⚖️ صواب وخطأ وتصويب المفاهيم الوزارية</option>
+                  <option value="essay">✍️ مقالي تحليلي مع نموذج الإجابة</option>
                   <option value="fill_blank">🔤 إكمال فراغات ومصطلحات</option>
                 </select>
               </div>
